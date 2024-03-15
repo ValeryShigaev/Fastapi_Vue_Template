@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+   db:
+    image: postgres:15.2
+    restart: always
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./conf/db/scripts:/docker-entrypoint-initdb.d
+      - ./conf/db/data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+   app_backend:
+     build:
+       context: ./app_backend
+       dockerfile: Dockerfile
+     command: uvicorn app_backend:create_app --host 0.0.0.0 --port 5000
+     volumes:
+       - ./app_backend:/code/app_backend
+       - ./app_backend/logs:/code/logs
+       - ./app_backend/media:/code/media
+     ports:
+       - 5000:5000
+     env_file:
+       - .env
+     links:
+       - db
+       - redis
+     depends_on:
+       - db
+       - redis
+   app_frontend:
+     build:
+       context: ./app_frontend
+       dockerfile: DockerfileFrontend
+     ports:
+      - "8080:8080"
+     container_name: app_frontend
+     volumes:
+         - ./app_frontend:/usr/src/app/app_frontend
+         - /usr/src/app/app_frontend/node_modules
+   redis:
+     image: redis:7.0-alpine
+   nginx:
+     build: ./nginx
+     network_mode: host
+     volumes:
+       - ./app_backend/media:/usr/src/app/media
+       - ./app_frontend:/usr/src/app/app_frontend
+     depends_on:
+       - app_backend
+       - app_frontend

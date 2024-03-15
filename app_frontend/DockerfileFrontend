@@ -1,0 +1,17 @@
+FROM node:alpine as build
+
+WORKDIR /usr/src/app/app_frontend
+
+COPY ./package.json ./
+COPY ./package-lock.json ./
+
+RUN npm install --force
+
+
+COPY . .
+
+EXPOSE 8080
+
+
+
+CMD ["npm", "run", "serve"]
